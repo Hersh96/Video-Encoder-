@@ -1,7 +1,0 @@
-video_encoder/
-├── main.py
-├── arg_parser.py
-├── image_processor.py
-├── video_writer.py
-├── video_encoder.py
-└── requirements.txt
