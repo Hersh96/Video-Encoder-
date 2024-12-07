@@ -1,0 +1,12 @@
+project/
+    main.py
+    arg_parser.py
+    huffman_coder.py
+    image_processor.py
+    dct_utils.py
+    video_effects.py
+    audio_integrator.py
+    video_writer.py
+    video_encoder.py
+    utils.py
+    gui.py
