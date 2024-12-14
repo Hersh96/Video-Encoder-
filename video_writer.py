@@ -1,59 +1,59 @@
+import json
+import struct
+import os
 
-import cv2
-
-class VideoWriter:
-    """
-    Encapsulates OpenCV's VideoWriter functionality.
-    """
-    FOURCC_CODES = {
-        'mp4': 'mp4v',
-        'avi': 'XVID',
-        'mov': 'mp4v'
-    }
-
-    def __init__(self, output_path, frame_size, framerate, video_format):
-        """
-        Initializes the VideoWriter.
-
-        Args:
-            output_path (str): Path to the output video file.
-            frame_size (tuple): (width, height) of the video frames.
-            framerate (int): Frame rate of the video.
-            video_format (str): Output video format.
-        """
+class CustomVideoWriter:
+    def __init__(self, output_path, resolution, framerate=10, verbose=False):
         self.output_path = output_path
-        self.frame_size = frame_size
+        self.width, self.height = resolution
         self.framerate = framerate
-        self.video_format = video_format
-        self.video_writer = self._initialize_writer()
+        self.verbose = verbose
+        self.frames = []
 
-    def _initialize_writer(self):
-        """
-        Initializes the OpenCV VideoWriter object.
+    def write_frame(self, encoded_frame):
+        self.frames.append(encoded_frame)
 
-        Returns:
-            cv2.VideoWriter: Initialized VideoWriter object.
+    def save(self):
+        metadata = {
+            "resolution": (self.width, self.height),
+            "framerate": self.framerate,
+            "frames_count": len(self.frames),
+        }
 
-        Raises:
-            IOError: If the VideoWriter cannot be opened.
-        """
-        fourcc = cv2.VideoWriter_fourcc(*self.FOURCC_CODES.get(self.video_format, 'mp4v'))
-        writer = cv2.VideoWriter(self.output_path, fourcc, self.framerate, self.frame_size)
-        if not writer.isOpened():
-            raise IOError(f"Cannot open video writer with path '{self.output_path}'.")
-        return writer
+        with open(self.output_path, "wb") as f:
+            metadata_bytes = json.dumps(metadata).encode("utf-8")
+            f.write(struct.pack("I", len(metadata_bytes)))
+            f.write(metadata_bytes)
 
-    def write_frame(self, frame):
-        """
-        Writes a single frame to the video.
+            for frame in self.frames:
+                frame_data = frame.encode("utf-8")
+                frame_length = len(frame_data)
+                f.write(struct.pack("I", frame_length))
+                f.write(frame_data)
 
-        Args:
-            frame (numpy.ndarray): Image frame to write.
-        """
-        self.video_writer.write(frame)
+        if self.verbose:
+            print(f"Custom video saved to {self.output_path}")
 
-    def release(self):
-        """
-        Releases the VideoWriter resource.
-        """
-        self.video_writer.release()
+    @staticmethod
+    def load(input_path, verbose=False):
+        if not os.path.exists(input_path):
+            raise FileNotFoundError(f"{input_path} does not exist.")
+
+        with open(input_path, "rb") as f:
+            metadata_length = struct.unpack("I", f.read(4))[0]
+            metadata_bytes = f.read(metadata_length)
+            metadata = json.loads(metadata_bytes.decode("utf-8"))
+
+            if verbose:
+                print(f"Loaded metadata: {metadata}")
+
+            frames = []
+            while True:
+                size_data = f.read(4)
+                if not size_data:
+                    break
+                frame_length = struct.unpack("I", size_data)[0]
+                frame_data = f.read(frame_length).decode("utf-8")
+                frames.append(frame_data)
+
+        return metadata, frames

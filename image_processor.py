@@ -1,60 +1,32 @@
-
-import os
 import cv2
+import os
+import glob
 
 class ImageProcessor:
-    """
-    Handles image retrieval and processing tasks.
-    """
-    SUPPORTED_EXTENSIONS = ('.png', '.jpg', '.jpeg', '.bmp', '.tiff', '.gif')
-
-    def __init__(self, input_folder, width, height, verbose=False):
-        """
-        Initializes the ImageProcessor.
-
-        Args:
-            input_folder (str): Path to the input images folder.
-            width (int): Target width for resizing.
-            height (int): Target height for resizing.
-            verbose (bool): If True, enables verbose output.
-        """
+    def __init__(self, input_folder, width=320, height=240, verbose=False):
         self.input_folder = input_folder
         self.width = width
         self.height = height
         self.verbose = verbose
-        self.image_files = self._get_image_files()
-
-    def _get_image_files(self):
-        """
-        Retrieves and sorts image files from the input folder.
-
-        Returns:
-            list: Sorted list of image file paths.
-        """
-        image_files = [
-            os.path.join(self.input_folder, file)
-            for file in os.listdir(self.input_folder)
-            if file.lower().endswith(self.SUPPORTED_EXTENSIONS)
-        ]
-        image_files.sort()
-        if self.verbose:
-            print(f"Found {len(image_files)} image(s) to process.")
-        return image_files
 
     def process_images(self):
-        """
-        Processes images by reading and resizing them.
+        images = glob.glob(os.path.join(self.input_folder, '*.jpg'))
+        images.sort()
 
-        Yields:
-            numpy.ndarray: Processed image frames.
-        """
-        for idx, img_path in enumerate(self.image_files):
-            image = cv2.imread(img_path)
-            if image is None:
+        if len(images) == 0:
+            print("No images found in the specified folder.")
+            return
+
+        if self.verbose:
+            print(f"Found {len(images)} image(s).")
+
+        for idx, image_path in enumerate(images):
+            frame = cv2.imread(image_path)
+            if frame is None:
                 if self.verbose:
-                    print(f"Warning: Unable to read image '{img_path}'. Skipping.")
+                    print(f"Warning: Unable to read '{image_path}'. Skipping.")
                 continue
-            resized_image = cv2.resize(image, (self.width, self.height))
-            if self.verbose:
-                print(f"Processed {idx + 1}/{len(self.image_files)}: '{img_path}'")
-            yield resized_image
+            frame = cv2.resize(frame, (self.width, self.height))
+            if self.verbose and idx % 10 == 0:
+                print(f"Processing image {idx + 1}/{len(images)}")
+            yield frame
